@@ -4,6 +4,10 @@
   "globals": {
     "browser": true
   },
+  "rules": {
+    "prefer-const": "warn",
+    "no-empty": "off"
+  },
   "parserOptions": {
     "ecmaVersion": 9
   },

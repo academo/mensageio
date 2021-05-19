@@ -1,4 +1,5 @@
 const button = document.getElementById("button-status");
+const services = document.getElementById("services");
 
 button.addEventListener("click", async () => {
   const value = await browser.storage.sync.get(["status"]);
@@ -7,17 +8,34 @@ button.addEventListener("click", async () => {
     updateTabs();
   }
   await browser.storage.sync.set({ status: newValue });
-  updateButtonStatus();
+  updateState();
 });
 
-browser.storage.onChanged.addListener(updateButtonStatus);
+let state = {};
 
-async function updateButtonStatus() {
-  const value = await browser.storage.sync.get(["status"]);
-  button.innerHTML = value.status || "loading";
+async function updateState() {
+  state = await browser.storage.sync.get();
+  render();
 }
 
-updateButtonStatus();
+function renderServices() {
+  if (state && state.activeTabs) {
+    let list = "";
+    for (const tab of state.activeTabs) {
+      list += `<li>${tab.url}</li>`;
+    }
+    services.innerHTML = list;
+  }
+}
+
+function render() {
+  button.innerHTML = state.status || "loading";
+  renderServices();
+}
+
+browser.storage.onChanged.addListener(updateState);
+
+updateState();
 
 async function updateTabs() {
   const tabs = await browser.tabs.query({});
