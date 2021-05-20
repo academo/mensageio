@@ -9,7 +9,8 @@
     "no-empty": "off"
   },
   "parserOptions": {
-    "ecmaVersion": 9
+    "ecmaVersion": 9,
+    "sourceType": "module"
   },
   "env": {
     "browser": true,

@@ -1,3 +1,5 @@
+import debounce from "debounce";
+
 const state = {
   currentStatus: "",
   activeTabsUrls: [],
@@ -86,44 +88,7 @@ async function restoreTabs() {
   return Promise.all(promises);
 }
 
-//async function preventTabClosing(tabId, tabStatus) {
-//if (tabStatus && tabStatus.status !== "complete") {
-//return;
-//}
-
-//try {
-//await browser.tabs.executeScript(tabId, {
-//code: `
-//window.addEventListener("beforeunload", function(event) {
-//console.log('MensageIO is preventing this tab to close')
-//event.preventDefault();
-//event.returnValue = '';
-//})
-//`,
-//});
-//} catch (e) {}
-//}
-
-//// this function assumes all tabs are opened already
-//async function orderTabs() {
-//let currentTabs = await browser.tabs.query({});
-//console.log(currentTabs);
-//for (let i = 0; i < activeTabsUrls.length; i++) {
-//console.log("checking", activeTabsUrls[i]);
-//currentTabs.forEach((tab) => {
-//const tabUrl = tab.url || tab.pendingUrl;
-//const url = new URL(tabUrl);
-//if (url.origin === activeTabsUrls[i].origin) {
-//console.log("found", tab);
-//browser.tabs.move(tab.id, {
-//index: -1,
-//});
-//}
-//});
-//}
-//}
-
-async function updateSidebar() {
+async function innerUpdateSidebar() {
   const currentTabs = await browser.tabs.query({});
   const payload = [];
   let currentTab;
@@ -138,6 +103,7 @@ async function updateSidebar() {
     payload.push({
       icon: tab.favIconUrl,
       active: tab.active,
+      id: tab.id,
     });
   }
   if (!currentTab || !currentTab.id) {
@@ -147,16 +113,60 @@ async function updateSidebar() {
     await browser.tabs.sendMessage(currentTab.id, payload);
   } catch (e) {}
 }
+const updateSidebar = debounce(innerUpdateSidebar, 50);
 
-function handleMessage(message) {
-  if (message === "service-ready") {
-    console.log("got ready");
+async function handleMessage(message) {
+  const { action } = message;
+  switch (action) {
+    case "service-ready":
+      updateSidebar();
+      break;
+    case "switch-tab": {
+      const { id } = message;
+      try {
+        browser.tabs.update(parseInt(id, 10), {
+          active: true,
+        });
+        break;
+      } catch (e) {}
+    }
+  }
+}
+
+// helper method to reload content scripts between addon re-installs
+async function installContentScript() {
+  const manifest = browser.runtime.getManifest();
+  // iterate over all content_script definitions from manifest
+  // and install all their js files to the corresponding hosts.
+  const contentScripts = manifest.content_scripts;
+  for (let i = 0; i < contentScripts.length; i++) {
+    const contScript = contentScripts[i];
+    const currentTabs = await browser.tabs.query({});
+    for (const tab of currentTabs) {
+      if (tab.url.startsWith("chrome://")) {
+        continue;
+      }
+      const javaScripts = contScript.js;
+      for (let k = 0; k < javaScripts.length; k++) {
+        try {
+          await browser.tabs.executeScript(tab.id, {
+            file: javaScripts[k],
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }
+}
+
+function handleTabUpdate(_tabId, changed) {
+  if (changed.favIconUrl) {
     updateSidebar();
   }
 }
 
 async function init() {
-  //browser.tabs.onUpdated.addListener(preventTabClosing);
   browser.runtime.onMessage.addListener(handleMessage);
   captureWebRequests();
   preventNewTabListener();
@@ -166,7 +176,11 @@ async function init() {
     await restoreTabs();
   }, 2000);
   browser.storage.onChanged.addListener(updateState);
+
   browser.tabs.onActivated.addListener(updateSidebar);
+  browser.tabs.onUpdated.addListener(handleTabUpdate);
 }
 
+browser.runtime.onInstalled.addListener(installContentScript);
 init();
+console.log("background ready");
