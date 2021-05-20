@@ -23,7 +23,6 @@ function renderServices() {
     let list = "";
     for (const tab of state.activeTabs) {
       list += `<li>
-        <img src="${tab.icon}">
         ${tab.url}
         </li>`;
     }
