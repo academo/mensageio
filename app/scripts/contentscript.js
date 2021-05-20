@@ -1,3 +1,5 @@
+import debounce from "debounce";
+
 window.addEventListener("beforeunload", function (event) {
   event.preventDefault();
   event.returnValue = "";
@@ -5,12 +7,10 @@ window.addEventListener("beforeunload", function (event) {
 
 const current =
   "men-" + window.crypto.getRandomValues(new Uint32Array(1))[0].toString();
+const sidebarEl = document.createElement("div");
 console.log("running content script", current);
 
-const sidebarEl = document.createElement("div");
-sidebarEl.classList.add(current);
-
-async function switchTab(event) {
+async function switchToTab(event) {
   const target = event.target;
   const element = target.closest("li");
   if (element.dataset.tabId) {
@@ -25,11 +25,12 @@ async function switchTab(event) {
 
 function initSidebar() {
   sidebarEl.id = "mensageio-sidebar-container";
+  sidebarEl.classList.add(current);
   document.body.appendChild(sidebarEl);
-  sidebarEl.addEventListener("click", switchTab);
+  sidebarEl.addEventListener("click", switchToTab);
 }
 
-async function renderSidebar(tabs) {
+async function innerRenderSidebar(tabs) {
   let html = "<ul class='mensageio-sidebar'>";
   for (const tab of tabs) {
     html += `
@@ -43,6 +44,8 @@ async function renderSidebar(tabs) {
   html += "</ul>";
   sidebarEl.innerHTML = html;
 }
+
+const renderSidebar = debounce(innerRenderSidebar, 50);
 
 function handleMessage(message) {
   if (message === "cleanup") {
@@ -72,7 +75,7 @@ function cleanUp(event) {
   browser.runtime.onMessage.removeListener(handleMessage);
   const element = document.querySelector("." + current);
   if (element) {
-    element.removeEventListener("click", switchTab);
+    element.removeEventListener("click", switchToTab);
     element.remove();
   }
   window.removeEventListener("cleanup-mensage-io", cleanUp);

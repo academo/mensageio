@@ -6,6 +6,9 @@ html {
 html body div.p-client_container div.p-client {
   width: calc(100vw - 60px) !important;
 }
+.ReactModal__Content {
+  margin-left: -60px;
+}
 
 #mensageio-sidebar-container {
   all: revert;
