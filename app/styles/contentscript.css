@@ -1,0 +1,43 @@
+html {
+  position: relative;
+  margin-left: 60px !important;
+}
+/*Slack specific*/
+html body div.p-client_container div.p-client {
+  width: calc(100vw - 60px) !important;
+}
+
+#mensageio-sidebar-container {
+  all: revert;
+  width: 60px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9000000000000000000;
+}
+
+.mensageio-sidebar {
+  all: revert;
+  background: #3b3b54;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mensageio-sidebar-icon {
+  all: revert;
+  padding: 13px;
+  margin: 0;
+  line-height: 0;
+}
+
+.mensageio-sidebar-icon.active {
+  background: #767682;
+}
+
+.mensageio-sidebar-icon-image {
+  all: revert;
+  width: 100%;
+}

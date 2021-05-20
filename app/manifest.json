@@ -43,5 +43,11 @@
     "webRequest",
     "webRequestBlocking",
     "<all_urls>"
-  ]
+  ],
+  "web_accessible_resources": ["pages/sidebar.html"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "mensageio@devaddon.com"
+    }
+  }
 }

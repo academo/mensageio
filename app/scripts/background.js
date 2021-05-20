@@ -60,7 +60,7 @@ function preventNewTabListener() {
 }
 
 async function updateState() {
-  const data = await browser.storage.sync.get(["activeTabs", "status"]);
+  const data = await browser.storage.local.get(["activeTabs", "status"]);
   data.activeTabs = data.activeTabs || [];
   state.activeTabsUrls = data.activeTabs.map((tab) => new URL(tab.url));
   state.currentStatus = data.status;
@@ -86,31 +86,23 @@ async function restoreTabs() {
   return Promise.all(promises);
 }
 
-async function preventTabClosing(tabId, tabStatus) {
-  if (tabStatus && tabStatus.status !== "complete") {
-    return;
-  }
+//async function preventTabClosing(tabId, tabStatus) {
+//if (tabStatus && tabStatus.status !== "complete") {
+//return;
+//}
 
-  try {
-    await browser.tabs.executeScript(tabId, {
-      code: `
-        window.addEventListener("beforeunload", function(event) {
-          console.log('MensageIO is preventing this tab to close')
-          event.preventDefault();
-          event.returnValue = '';
-        })
-      `,
-    });
-  } catch (e) {}
-}
-
-async function preventTabsClosing() {
-  const currentTabs = await browser.tabs.query({});
-  for (const tab of currentTabs) {
-    preventTabClosing(tab.id);
-  }
-  browser.tabs.onUpdated.addListener(preventTabClosing);
-}
+//try {
+//await browser.tabs.executeScript(tabId, {
+//code: `
+//window.addEventListener("beforeunload", function(event) {
+//console.log('MensageIO is preventing this tab to close')
+//event.preventDefault();
+//event.returnValue = '';
+//})
+//`,
+//});
+//} catch (e) {}
+//}
 
 //// this function assumes all tabs are opened already
 //async function orderTabs() {
@@ -131,16 +123,50 @@ async function preventTabsClosing() {
 //}
 //}
 
+async function updateSidebar() {
+  const currentTabs = await browser.tabs.query({});
+  const payload = [];
+  let currentTab;
+  for (const tab of currentTabs) {
+    if (!tab.id || tab.url.startsWith("chrome://")) {
+      continue;
+    }
+
+    if (tab.active) {
+      currentTab = tab;
+    }
+    payload.push({
+      icon: tab.favIconUrl,
+      active: tab.active,
+    });
+  }
+  if (!currentTab || !currentTab.id) {
+    return;
+  }
+  try {
+    await browser.tabs.sendMessage(currentTab.id, payload);
+  } catch (e) {}
+}
+
+function handleMessage(message) {
+  if (message === "service-ready") {
+    console.log("got ready");
+    updateSidebar();
+  }
+}
+
 async function init() {
+  //browser.tabs.onUpdated.addListener(preventTabClosing);
+  browser.runtime.onMessage.addListener(handleMessage);
   captureWebRequests();
   preventNewTabListener();
-  preventTabsClosing();
   await updateState();
   // a timeout to give the browser time to finish initializing tabs
   setTimeout(async () => {
     await restoreTabs();
   }, 2000);
   browser.storage.onChanged.addListener(updateState);
+  browser.tabs.onActivated.addListener(updateSidebar);
 }
 
 init();
