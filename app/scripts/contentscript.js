@@ -1,9 +1,14 @@
 import debounce from "debounce";
 
-window.addEventListener("beforeunload", function (event) {
-  event.preventDefault();
-  event.returnValue = "";
-});
+let status = "";
+
+function onUnload(event) {
+  if (status === "active") {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+}
+window.addEventListener("beforeunload", onUnload);
 
 const current =
   "men-" + window.crypto.getRandomValues(new Uint32Array(1))[0].toString();
@@ -62,6 +67,14 @@ async function init() {
   browser.runtime.onMessage.addListener(handleMessage);
   initSidebar();
   browser.runtime.sendMessage({ action: "service-ready" });
+  updateStatus();
+}
+
+browser.storage.local.onChanged.addListener(updateStatus);
+
+async function updateStatus() {
+  const data = await browser.storage.local.get(["status"]);
+  status = data.status;
 }
 
 window.addEventListener("cleanup-mensage-io", cleanUp);
@@ -73,6 +86,7 @@ function cleanUp(event) {
   console.log("cleaning up content scripts", current);
   browser.runtime.onMessage.removeListener(renderSidebar);
   browser.runtime.onMessage.removeListener(handleMessage);
+  window.removeEventListener("beforeunload", onUnload);
   const element = document.querySelector("." + current);
   if (element) {
     element.removeEventListener("click", switchToTab);
