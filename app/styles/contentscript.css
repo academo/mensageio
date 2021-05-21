@@ -9,6 +9,10 @@ html body div.p-client_container div.p-client {
 .ReactModal__Content {
   margin-left: -60px;
 }
+/** Discord specific */
+div.container-2lgZY8 {
+  width: calc(100vw - 60px) !important;
+}
 
 #mensageio-sidebar-container {
   all: revert;
